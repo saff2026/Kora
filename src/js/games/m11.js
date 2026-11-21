@@ -55,7 +55,7 @@ const M11={
       const label=(ok||rv)?esc(this.shown(p)):esc(this.pattern(i));
       return '<button class="'+cls+'" style="left:'+ps.x+'%;top:'+ps.y+'%" onclick="M11.pick('+i+')" aria-label="'+esc(this.POS[p.p]||p.p)+'"><span class="sh num">'+(ok?'✓':(rv?'✕':AR(letters(this.shown(p)).length)))+'</span><span class="nm">'+label+'</span><span class="ps">'+esc(this.POS[p.p]||p.p)+'</span></button>';
     }).join('');
-    const sc=m.sc?'<div class="sc num">'+AR(m.sc[0])+' – '+AR(m.sc[1])+'</div>':'<div class="sc">ضد</div>';
+    const sc=m.sc?'<div class="sc num">'+m.sc[0]+' – '+m.sc[1]+'</div>':'<div class="sc">ضد</div>';
     screen('الناقص 11','m11',modeSeg('M11',this.mode)+
      '<div class="stack" style="margin-top:12px"><div class="card"><div class="match"><div class="tm me">'+esc(m.me)+'</div>'+sc+'<div class="tm">'+esc(m.op)+'</div></div><div class="match-sub"><b>'+esc(m.comp)+'</b>'+(m.date?'<br>'+esc(new Date(m.date).toLocaleDateString('ar-SA-u-ca-gregory-nu-arab',{day:'numeric',month:'long',year:'numeric'})):'')+'</div></div>'+
      '<div class="tagrow" style="padding:0 4px"><span class="pill a num">'+AR(nSolved)+' / ١١</span><span class="muted small">٦ محاولات لكل لاعب</span></div>'+
