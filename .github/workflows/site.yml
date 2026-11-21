@@ -1,0 +1,79 @@
+name: نشر الموقع وتحديث البيانات
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 1 * * 1'   # كل يوم اثنين الساعة 1:17 بتوقيت غرينتش (4:17 فجرًا بتوقيت السعودية)
+  workflow_dispatch:
+    inputs:
+      refresh:
+        description: 'تحديث البيانات من ويكي بيانات وويكيبيديا قبل النشر'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: site
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    # التحديث الأسبوعي، أو عند التشغيل اليدوي مع اختيار التحديث
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh)
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests
+      - name: بناء البيانات من ويكي بيانات وويكيبيديا
+        env:
+          KORA_CACHE: ${{ runner.temp }}/kora-cache
+        run: bash tools/run_all.sh
+      - name: بناء صفحة الموقع
+        run: python3 build.py
+      - name: حفظ البيانات الجديدة
+        run: |
+          git config user.name "kora-data-bot"
+          git config user.email "kora-data-bot@users.noreply.github.com"
+          git add data/kora.json index.html app.html
+          if git diff --cached --quiet; then
+            echo "لا توجد بيانات جديدة"
+          else
+            git commit -m "تحديث البيانات الأسبوعي $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+  deploy:
+    needs: refresh
+    # ينشر بعد التحديث، أو مباشرة عند أي تعديل على الفرع الرئيسي
+    if: always() && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: تجهيز ملفات الموقع
+        run: |
+          mkdir -p _site
+          cp index.html _site/
+          cp -r data _site/
+          cp -r assets _site/ 2>/dev/null || true
+          cp manifest.webmanifest _site/ 2>/dev/null || true
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
