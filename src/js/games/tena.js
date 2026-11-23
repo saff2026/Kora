@@ -20,11 +20,12 @@ const TENA={
       const win=st.f.length===n;
       top=resultCard({em:win?'🏆':'📋',title:win?'القائمة كاملة!':'انتهت المحاولات',sub:'وجدت '+AR(st.f.length)+' من '+AR(n)+(this.tension?' · النقاط '+AR(st.pts):''),daily:this.mode==='daily',game:'tena',share:'TENA.share()',again:"TENA.start('free')",againLabel:'قائمة أخرى'});
     } else top='<div class="card"><div class="tagrow"><span class="pill a num">'+AR(st.f.length)+' / '+AR(n)+'</span>'+(this.tension?'<span class="pill g num">×'+AR(st.mult)+' · '+AR(st.pts)+' نقطة</span>':'')+livesHTML(left,this.lives(),true)+'</div>'+
-      '<form id="tf" style="display:flex;gap:8px;margin-top:12px" autocomplete="off"><input class="field" id="tin" placeholder="اكتب إجابة…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done"><button class="btn" type="submit">أضف</button></form>'+
+      '<form id="tf" style="display:flex;gap:8px;margin-top:12px" autocomplete="off"><div class="ac" style="flex:1;min-width:0"><input class="field" id="tin" placeholder="اكتب إجابة…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done"><div class="ac-list" id="tinL"></div></div><button class="btn" type="submit">أضف</button></form>'+
       (st.w.length?'<div class="wrong" style="margin-top:10px">'+st.w.map(w=>'<span>'+esc(w)+'</span>').join('')+'</div>':'')+'<div style="text-align:center;margin-top:6px"><button class="btn danger small" onclick="TENA.end()">استسلام وعرض الإجابات</button></div></div>';
     const modes='<div class="chips" style="margin:10px 0"><button class="chip '+(!this.tension?'on':'')+'" onclick="TENA.start(TENA.mode,false)">كلاسيكي · ٣ أرواح</button><button class="chip '+(this.tension?'on':'')+'" onclick="TENA.start(TENA.mode,true)">التوتر 🥶 · ٥ أرواح ونقاط</button></div>';
     screen('القائمة العشرية','tena',modeSeg('TENA',this.mode)+modes+'<div class="stack"><div class="card"><h2 style="font-size:1.2rem;font-weight:800">'+esc(L.t)+'</h2><div class="muted small">'+esc(L.sub||'')+'</div></div>'+top+'<div class="card"><div class="ans" style="grid-template-columns:1fr">'+rows+'</div></div></div>');
-    if(!st.done)$('#tf').addEventListener('submit',e=>{e.preventDefault();this.guess($('#tin').value);});
+    if(!st.done){$('#tf').addEventListener('submit',e=>{e.preventDefault();this.guess($('#tin').value);});
+      const kinds=L.id.startsWith('w-')?['t','c']:['p'];bindSuggest($('#tin'),$('#tinL'),x=>suggestNames(x,kinds),it=>this.guess(it.label));}
   },
   guess(v){
     v=v.trim();if(!v)return;const st=this.st,L=this.L();

@@ -119,7 +119,7 @@ function age(p){return p.by?(new Date().getFullYear()-p.by):null;}
 
 /* بحث اللاعبين */
 function findPlayers(q,limit=8,filter){
-  const x=norm(q); if(x.length<2)return [];
+  const x=norm(q); if(x.length<1)return [];
   const out=[];
   for(const p of D.P){
     if(filter&&!filter(p))continue;
@@ -137,10 +137,11 @@ function bindAC(input,list,onPick,opts){
   opts=opts||{};let items=[],hl=0;
   const paint=()=>{list.innerHTML=items.map((p,i)=>'<button type="button" class="ac-it'+(i===hl?' hl':'')+(opts.isUsed&&opts.isUsed(p)?' used':'')+'" data-i="'+i+'">'+playerLine(p)+'</button>').join('');};
   input.addEventListener('input',()=>{items=findPlayers(input.value,8,opts.filter);hl=0;paint();});
+  input.addEventListener('blur',()=>setTimeout(()=>{items=[];paint();},150));
   input.addEventListener('keydown',e=>{
     if(e.key==='ArrowDown'){hl=Math.min(hl+1,items.length-1);paint();e.preventDefault();}
     else if(e.key==='ArrowUp'){hl=Math.max(hl-1,0);paint();e.preventDefault();}
-    else if(e.key==='Enter'){e.preventDefault();if(items[hl])choose(items[hl]);}
+    else if(e.key==='Enter'&&items[hl]){e.preventDefault();choose(items[hl]);}
   });
   list.addEventListener('mousedown',e=>e.preventDefault());
   list.addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(b)choose(items[+b.dataset.i]);});
@@ -233,3 +234,47 @@ function buildGrid(r,rowsN,colsN,opt){
 }
 function gridSets(g){const s=[];for(const a of g.rows)for(const b of g.cols)s.push(D.P.filter(p=>catTest(a)(p)&&catTest(b)(p)).map(p=>p.q));return s;}
 
+
+/* =================== تقارب الفئات: كم لاعبًا مشهورًا يجمع فئتين؟ =================== */
+const _catSet={},_ovl={};
+function catSet(c){const k=catKey(c);if(!_catSet[k]){const t=catTest(c);_catSet[k]=new Set(D.P.filter(p=>p.fame>=30&&t(p)).map(p=>p.q));}return _catSet[k];}
+function catOverlap(a,b){
+  const k=catKey(a)<catKey(b)?catKey(a)+'|'+catKey(b):catKey(b)+'|'+catKey(a);
+  if(_ovl[k]==null){const A=catSet(a),B=catSet(b);const [s,l]=A.size<B.size?[A,B]:[B,A];let n=0;s.forEach(q=>{if(l.has(q))n++;});_ovl[k]=n;}
+  return _ovl[k];
+}
+
+/* قائمة اقتراحات عامة لنصوص (أندية، دول، لاعبين) */
+function bindSuggest(input,list,source,onPick){
+  let items=[],hl=0;
+  const paint=()=>{list.innerHTML=items.map((it,i)=>'<button type="button" class="ac-it'+(i===hl?' hl':'')+'" data-i="'+i+'">'+(it.pre||'')+' '+esc(it.label)+(it.sub?'<small>'+esc(it.sub)+'</small>':'')+'</button>').join('');};
+  input.addEventListener('input',()=>{const x=norm(input.value);items=x?source(x).slice(0,8):[];hl=0;paint();});
+  input.addEventListener('keydown',e=>{
+    if(e.key==='ArrowDown'){hl=Math.min(hl+1,items.length-1);paint();e.preventDefault();}
+    else if(e.key==='ArrowUp'){hl=Math.max(hl-1,0);paint();e.preventDefault();}
+    else if(e.key==='Enter'&&items[hl]){e.preventDefault();pick(items[hl]);}
+  });
+  input.addEventListener('blur',()=>setTimeout(()=>{items=[];paint();},150));
+  list.addEventListener('mousedown',e=>e.preventDefault());
+  list.addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(b)pick(items[+b.dataset.i]);});
+  function pick(it){items=[];paint();onPick(it);}
+}
+/* فهرس كل الأسماء المعروفة: لاعبون، أندية، دول — لاقتراحات القوائم */
+let _nameIdx=null;
+function nameIndex(){
+  if(_nameIdx)return _nameIdx;
+  const out=[];
+  Object.keys(D.C).forEach(q=>out.push({label:D.C[q][0],pre:D.C[q][1],sub:'دولة',k:norm(D.C[q][0]),w:500}));
+  Object.keys(D.T).forEach(q=>{const t=D.T[q];if(t[8])return;out.push({label:t[0],pre:flag(t[1]),sub:'نادٍ',k:norm(t[0]),w:(t[10]||0)});});
+  D.famous.slice(0,4000).forEach(p=>out.push({label:p.n,pre:flag(p.nat),sub:tName(p.mainClub),k:norm(p.n),kl:p.kl,w:p.fame}));
+  return _nameIdx=out;
+}
+function suggestNames(x,kinds){
+  const res=[];
+  for(const it of nameIndex()){
+    if(kinds&&!kinds.includes(it.sub==='دولة'?'c':it.sub==='نادٍ'?'t':'p'))continue;
+    let s=-1;if(it.k===x)s=4;else if(it.k.startsWith(x))s=3;else if(noAl(it.k).startsWith(noAl(x)))s=2.5;else if(it.kl&&it.kl.startsWith(x))s=2;else if(it.k.includes(x))s=1;
+    if(s>=0)res.push([s+Math.min(it.w,500)/500,it]);
+  }
+  return res.sort((a,b)=>b[0]-a[0]).map(a=>a[1]);
+}

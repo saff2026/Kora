@@ -70,11 +70,23 @@ const DRAFT={
   LINKS:[[0,2],[0,3],[1,2],[2,3],[3,4],[1,5],[2,6],[3,6],[4,7],[5,6],[6,7],[5,8],[6,9],[7,10],[8,9],[9,10]],
   start(mode){
     mode=mode||this.mode||'daily';this.mode=mode;
-    const r=rng(seedFor('draft',mode));
-    const byPos={};D.famous.slice(0,1500).forEach(p=>{if(p.pos)(byPos[p.pos]=byPos[p.pos]||[]).push(p.q);});
-    const offers=this.F.map(f=>pickN(byPos[f[4]],4,r));
-    const fresh=()=>({offers,team:new Array(11).fill(null),done:false});
-    this.st=mode==='daily'?dayState('draft',fresh):fresh();this.draw();
+    this.seed=seedFor('draft',mode);
+    const fresh=()=>({offers:new Array(11).fill(null),team:new Array(11).fill(null),done:false});
+    this.st=mode==='daily'?dayState('draft',fresh):fresh();
+    if(this.st.v!==2)this.st=Object.assign({day:DAY},fresh()); // حالة محفوظة من النسخة السابقة
+    this.st.v=2;this.draw();
+  },
+  /* عروض منطقية: لاعبان يرتبطان بمن اخترتهم في المراكز المجاورة (نادٍ أو منتخب مشترك) ولاعبان من خارجهم */
+  makeOffers(slot){
+    const st=this.st,r=rng(this.seed+slot*7919);
+    const pos=this.F[slot][4];const taken=new Set(st.team.filter(Boolean));
+    const pool=D.famous.slice(0,1500).filter(p=>p.pos===pos&&!taken.has(p.q));
+    const mates=this.LINKS.filter(l=>l.includes(slot)).map(l=>l[0]===slot?l[1]:l[0]).map(i=>D.byQ[st.team[i]]).filter(Boolean);
+    const linked=mates.length?pool.filter(p=>mates.some(m=>m.nat===p.nat||[...m.clubs].some(c=>p.clubs.has(c)))):[];
+    const pick=[];
+    pickN(linked.slice(0,200),2,r).forEach(p=>pick.push(p));
+    pickN(pool.filter(p=>!pick.includes(p)),4-pick.length,r).forEach(p=>pick.push(p));
+    return shuffled(pick,r).map(p=>p.q);
   },
   save(){if(this.mode==='daily')saveDay('draft',this.st);},
   rating(p){return Math.round(Math.min(99,55+Math.log2(1+p.fame)*5));},
@@ -91,7 +103,7 @@ const DRAFT={
     const filled=st.team.filter(Boolean).map(q=>D.byQ[q]);const avg=filled.length?Math.round(filled.reduce((a,p)=>a+this.rating(p),0)/filled.length):0;const chem=this.chem();
     let panel;
     if(slot<0||st.done){if(!st.done){st.done=true;if(this.mode==='daily')recordResult('draft',true,avg+chem);this.save();}panel=resultCard({em:'📋',title:'تقييم فريقك: '+AR(avg+chem),sub:'متوسط اللاعبين '+AR(avg)+' + الانسجام '+AR(chem)+' من '+AR(this.LINKS.length*3),daily:this.mode==='daily',game:'draft',share:'DRAFT.share()',again:"DRAFT.start('free')",againLabel:'مسودة جديدة'});}
-    else{const f=this.F[slot];panel='<div class="card"><div class="tagrow"><b class="disp">اختر '+esc(f[1])+'</b><span class="pill num">'+AR(st.team.filter(Boolean).length)+' / ١١</span></div>'+st.offers[slot].map(q=>{const p=D.byQ[q];return '<button class="opt" onclick="DRAFT.choose('+slot+',\''+q+'\')"><span class="tagrow"><span>'+flag(p.nat)+' '+esc(p.n)+'<br><span class="muted small">'+esc(tName(p.mainClub))+'</span></span><b class="num" style="font-family:var(--f-display);font-size:1.2rem">'+AR(this.rating(p))+'</b></span></button>';}).join('')+'</div>';}
+    else{if(!st.offers[slot]){st.offers[slot]=this.makeOffers(slot);this.save();}const f=this.F[slot];panel='<div class="card"><div class="tagrow"><b class="disp">اختر '+esc(f[1])+'</b><span class="pill num">'+AR(st.team.filter(Boolean).length)+' / ١١</span></div>'+st.offers[slot].map(q=>{const p=D.byQ[q];return '<button class="opt" onclick="DRAFT.choose('+slot+',\''+q+'\')"><span class="tagrow"><span>'+flag(p.nat)+' '+esc(p.n)+'<br><span class="muted small">'+esc(tName(p.mainClub))+'</span></span><b class="num" style="font-family:var(--f-display);font-size:1.2rem">'+AR(this.rating(p))+'</b></span></button>';}).join('')+'</div>';}
     screen('التشكيلة الحلم','draft',modeSeg('DRAFT',this.mode)+'<div class="stack" style="margin-top:12px"><div class="tagrow"><span class="pill a num">التقييم '+AR(avg)+'</span><span class="pill g num">الانسجام '+AR(chem)+'</span></div><div class="pitch"><div class="ln mid"></div><div class="ln circ"></div><div class="ln box"></div><div class="ln six"></div><svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%">'+lines+'</svg>'+toks+'</div>'+panel+'</div>');
   },
   focus(i){},

@@ -111,14 +111,20 @@ const GEGEN={
     this.pool=[].concat(C.club,C.nat,C.lg,C.aw);
     this.r=r;
     const board=pickN(this.pool,9,r);
-    const seq=pickN(D.famous.slice(0,1500),100,r).map(p=>p.q);
-    this.st={board,seq,i:0,score:0,cnt:{},wild:3,started:false,done:false,lines:0};
+    this.st={board,seq:[],total:100,i:0,score:0,cnt:{},wild:3,started:false,done:false,lines:0};
     if(mode==='daily'){const d=store.get('day:gegen',null);if(d&&d.day===DAY&&d.done){this.st.done=true;this.st.score=d.score;}}
     this.draw();
   },
   stop(){clearInterval(this._iv);},
   begin(){this.st.started=true;this.next(true);},
-  next(first){const st=this.st;if(!first)st.i++;if(st.i>=st.seq.length){this.end();return;}st.dl=Date.now()+this.T*1000;this.draw();this.loop();},
+  /* اللاعب التالي: غالبًا يناسب فئة واحدة على الأقل من اللوحة الحالية حتى تكون اللعبة عادلة */
+  pickNext(){
+    const st=this.st,used=new Set(st.seq),pool=D.famous.slice(0,1500).filter(p=>!used.has(p.q));
+    const tests=st.board.map(catTest),fit=pool.filter(p=>tests.some(t=>t(p)));
+    const src=(this.r()<0.9&&fit.length)?fit:pool;
+    return src[Math.floor(this.r()*Math.min(src.length,400))].q;
+  },
+  next(first){const st=this.st;if(!first)st.i++;if(st.i>=st.total){this.end();return;}st.seq[st.i]=this.pickNext();st.dl=Date.now()+this.T*1000;this.draw();this.loop();},
   loop(){clearInterval(this._iv);this._iv=setInterval(()=>{const l=Math.max(0,(this.st.dl-Date.now())/1000);const b=$('#ggbar');if(b)b.style.width=(l*100/this.T)+'%';if(l<=0){clearInterval(this._iv);toast('انتهى الوقت');this.next();}},100);},
   lines(){const L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];return L.filter(l=>l.every(i=>this.st.cnt[i]));},
   clear(){
@@ -145,7 +151,7 @@ const GEGEN={
     const p=D.byQ[st.seq[st.i]];
     const cells=st.board.map((c,k)=>'<button onclick="GEGEN.tap('+k+')" class="'+(st.cnt[k]?'done':'')+'">'+catIcon(c)+esc(catLabel(c))+(st.cnt[k]?' ●':'')+'</button>').join('');
     const top=!st.started?'<div class="card result"><div class="em">⚡</div><h3>الهدف: '+AR(this.TARGET)+' نقطة</h3><p>١٠٠ لاعب، طابق كل لاعب مع فئة خلال ١٠ ثوانٍ.</p><button class="btn block" onclick="GEGEN.begin()">انطلق</button></div>':
-      '<div class="pcard"><div class="tagrow"><span class="mt">النقاط '+AR(st.score)+' / '+AR(this.TARGET)+' · باقي '+AR(st.seq.length-st.i)+' لاعب</span><span class="mt">🃏 '+AR(st.wild)+'</span></div><div class="nm" style="margin-top:6px">'+flag(p.nat)+' '+esc(p.n)+'</div><div class="mt">'+esc(p.pos||'')+'</div><div class="timer" style="margin-top:10px;background:rgba(255,255,255,.2)"><i id="ggbar" style="width:100%;background:#E6CC78"></i></div><div class="btns" style="margin-top:10px;justify-content:center"><button class="btn sec" style="background:rgba(255,255,255,.15);color:#fff" onclick="GEGEN.skip()">تخطٍّ</button>'+(st.wild?'<button class="btn" style="background:#E6CC78;color:#1a1405" onclick="GEGEN.wildcard()">🃏 ورقة رابحة</button>':'')+'</div></div>';
+      '<div class="pcard"><div class="tagrow"><span class="mt">النقاط '+AR(st.score)+' / '+AR(this.TARGET)+' · باقي '+AR(st.total-st.i)+' لاعب</span><span class="mt">🃏 '+AR(st.wild)+'</span></div><div class="nm" style="margin-top:6px">'+flag(p.nat)+' '+esc(p.n)+'</div><div class="mt">'+esc(p.pos||'')+'</div><div class="timer" style="margin-top:10px;background:rgba(255,255,255,.2)"><i id="ggbar" style="width:100%;background:#E6CC78"></i></div><div class="btns" style="margin-top:10px;justify-content:center"><button class="btn sec" style="background:rgba(255,255,255,.15);color:#fff" onclick="GEGEN.skip()">تخطٍّ</button>'+(st.wild?'<button class="btn" style="background:#E6CC78;color:#1a1405" onclick="GEGEN.wildcard()">🃏 ورقة رابحة</button>':'')+'</div></div>';
     screen('الضغط العالي','gegen',modeSeg('GEGEN',this.mode)+'<div class="stack" style="margin-top:12px">'+top+'<div class="bb c3">'+cells+'</div></div>');
   },
   share(){share('تحدّي الكورة · الضغط العالي #'+DAYNO+'\n⚡ '+this.st.score+' نقطة'+(this.st.score>=this.TARGET?' ✅':''));}

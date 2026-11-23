@@ -76,9 +76,10 @@ const M11={
     const slots='<div class="tiles">'+L.map((c,j)=>'<div class="tile '+(kn[j]?'k':'empty')+'">'+(kn[j]?esc(c):'')+'</div>').join('')+'</div>';
     const hist=(st.hist[i]||[]).slice().reverse().map(g=>this.tilesFor(g,i)).join('');
     $('#m11panel').innerHTML='<div class="card"><div class="tagrow" style="margin-bottom:10px"><b class="disp">'+esc(this.POS[p.p]||p.p)+(p.no?' · رقم '+AR(p.no):'')+'</b><span class="pill num">'+AR(left)+' محاولات</span></div>'+slots+
-     '<form id="m11f" style="display:flex;gap:8px;margin-top:12px" autocomplete="off"><input class="field" id="m11in" placeholder="اسم عائلة اللاعب" enterkeyhint="done" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn" type="submit">تحقّق</button></form>'+
+     '<form id="m11f" style="display:flex;gap:8px;margin-top:12px" autocomplete="off"><div class="ac" style="flex:1;min-width:0"><input class="field" id="m11in" placeholder="اكتب اسم اللاعب" enterkeyhint="done" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="ac-list" id="m11inL"></div></div><button class="btn" type="submit">تحقّق</button></form>'+
      '<div class="hist">'+hist+'</div><div class="btns" style="margin-top:10px"><button class="btn danger" onclick="M11.giveUpAsk()">استسلام</button></div></div>';
     $('#m11f').addEventListener('submit',e=>{e.preventDefault();this.guess($('#m11in').value);});
+    bindAC($('#m11in'),$('#m11inL'),pl=>this.guessPlayer(pl));
   },
   tilesFor(g,i){
     const k=[...this.key(this.m.xi[i])],gg=[...norm(g)],disp=letters(g);
@@ -89,6 +90,8 @@ const M11={
     const show=disp.length===gg.length?disp:gg;
     return '<div class="tiles sm">'+gg.map((c,j)=>'<div class="tile '+res[j]+'">'+esc(show[j])+'</div>').join('')+'</div>';
   },
+  /* اختيار لاعب من القائمة: إن كان هو نفسه فصحيح، وإلا نستخدم اسم عائلته لتلوين الحروف */
+  guessPlayer(pl){const t=this.m.xi[this.sel];if(pl.q===t.q)return this.guess(t.n);const w=pl.n.split(/\s+/);this.guess(w[w.length-1]);},
   next(){const st=this.st,n=this.m.xi.length;for(let k=1;k<=n;k++){const j=(this.sel+k)%n;if(!st.solved[j]&&!st.fail[j])return j;}return -1;},
   checkEnd(){const st=this.st;if(this.m.xi.every((p,i)=>st.solved[i]||st.fail[i])){st.done=true;if(this.mode==='daily')recordResult('m11',Object.keys(st.solved).length===11);}},
   guess(v){

@@ -110,6 +110,8 @@ async function render(){
     $('#app').innerHTML='<div class="loading"><div class="spin"></div>جارِ التحميل…</div>';
     try{await loadData();}catch(e){$('#app').innerHTML='<div class="loading">تعذّر تحميل البيانات. تأكد من اتصالك ثم أعد تحميل الصفحة.</div>';return;}
   }
+  const jm=h.match(/^join-([A-Za-z2-9]{5})$/);
+  if(jm)return joinScreen(jm[1].toUpperCase());
   const g=gameById(h);
   if(g){CUR=g.obj;g.obj.start();return;}
   if(!TABS.some(t=>t[0]===h))h='today';
@@ -170,4 +172,14 @@ function renderMe(){
     '<div class="card rise" style="text-align:center;padding:22px"><div style="width:180px;max-width:60%;margin:0 auto">'+ringsSVG([t.played/t.total,t.played?t.won/t.played:0,t.streak/7])+'</div>'+
     '<div class="stats num" style="margin:16px 0 0"><div><b class="c1">'+AR(t.played)+'</b><span>لعبت اليوم</span></div><div><b class="c2">'+AR(t.won)+'</b><span>فزت اليوم</span></div><div><b class="c3">'+AR(t.streak)+'</b><span>أطول سلسلة</span></div><div><b>'+AR(t.total)+'</b><span>لغز يومي</span></div></div></div>'+
     '<div class="sh-row"><h2>نسبة الفوز في كل لعبة</h2></div><div class="statgrid">'+tiles+'</div>'+footHTML();
+}
+
+/* فتح رابط غرفة: نطلب الاسم إن لم يكن محفوظًا ثم ندخل */
+function joinScreen(code){
+  $('#tabbar').hidden=true;
+  if(MP.name()){$('#app').innerHTML='<div class="loading"><div class="spin"></div>جارِ الدخول إلى الغرفة '+code+'…</div>';MP.join(code,true).then(()=>{if(!MP.code)renderJoinForm(code);});return;}
+  renderJoinForm(code);
+}
+function renderJoinForm(code){
+  $('#app').innerHTML='<header class="lt"><div><div class="cap">دعوة للعب</div><h1>غرفة '+esc(code)+'</h1></div></header><div class="stack"><div class="card"><label class="small muted" for="mpName">اسمك</label><input class="field" id="mpName" maxlength="20" placeholder="اكتب اسمك" value="'+esc(MP.name())+'" style="margin-top:6px"></div><button class="btn block" onclick="MP.join(\''+code+'\')">دخول الغرفة</button><button class="btn sec block" onclick="go(\'today\')">الرجوع للرئيسية</button></div>';
 }

@@ -7,9 +7,9 @@ import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, 'src')
-JS_ORDER = ['core.js', 'ui.js', 'games/m11.js', 'games/who.js', 'games/grid.js', 'games/career.js', 'games/questions.js',
+JS_ORDER = ['core.js', 'ui.js', 'online.js', 'games/m11.js', 'games/who.js', 'games/grid.js', 'games/career.js', 'games/questions.js',
             'games/tena.js', 'games/more.js', 'games/boards.js', 'games/lists.js', 'games/hex.js', 'games/quiz.js',
-            'games/party.js', 'main.js']
+            'games/party.js', 'games/ringl.js', 'games/multi.js', 'main.js']
 
 HEAD = '''<title>تحدّي الكورة</title>
 <meta name="claude:viewport-fit-sides" content="cover">
